@@ -4,6 +4,7 @@ import { Send, ArrowLeft, Loader2, CheckCircle2, XCircle, MessageCircle } from '
 import { motion, AnimatePresence } from 'motion/react';
 import { sounds } from '../lib/sounds';
 import { toast } from '../lib/toast';
+import { generateDealCertificate } from '../lib/generateDealCertificate';
 
 interface ChatInterfaceProps {
   currentUserId: string;
@@ -29,6 +30,20 @@ export default function ChatInterface({
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileListVisible, setIsMobileListVisible] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [showDealPanel, setShowDealPanel] = useState(true);
+  const [basePay, setBasePay] = useState(1500);
+  const [bonusPer100, setBonusPer100] = useState(50);
+  const [dealLocked, setDealLocked] = useState(false);
+  const dealUpdateTimer = useRef<any>(null);
+
+  useEffect(() => {
+    if (activeChat) {
+      setBasePay(activeChat.base_pay || 1500);
+      setBonusPer100(activeChat.view_bonus_per_500 || 50);
+      setDealLocked(activeChat.status === 'accepted' || activeChat.status === 'completed');
+    }
+  }, [activeChat?.id, activeChat?.base_pay, activeChat?.view_bonus_per_500, activeChat?.status]);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -164,6 +179,76 @@ export default function ChatInterface({
     }
   };
 
+  const handleUpdateDealTerms = async (newBasePay: number, newBonus: number) => {
+    if (!activeChat?.id || dealLocked) return;
+    
+    clearTimeout(dealUpdateTimer.current);
+    dealUpdateTimer.current = setTimeout(async () => {
+      await supabase
+        .from('deals')
+        .update({ 
+          base_pay: newBasePay,
+          view_bonus_per_500: newBonus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', activeChat.id);
+  
+      const senderName = currentUserRole === 'BRAND'
+        ? currentBrandData?.business_name
+        : currentCreatorData?.ig_handle;
+      
+      const autoMsg = {
+        deal_id: activeChat.id,
+        sender_id: currentUserId,
+        content: `Updated offer terms — Advance: ₹${newBasePay.toLocaleString()}, Bonus: ₹${newBonus} per 100 views`
+      };
+      
+      await supabase.from('messages').insert(autoMsg);
+    }, 800);
+  };
+  
+  const handleLockDeal = async () => {
+    if (!activeChat?.id) return;
+    
+    const confirmed = window.confirm(
+      `Lock deal?\n\nAdvance: ₹${basePay.toLocaleString()}\nBonus: ₹${bonusPer100} per 100 views\n\nThis cannot be changed after locking.`
+    );
+    if (!confirmed) return;
+  
+    await supabase
+      .from('deals')
+      .update({ 
+        status: 'accepted',
+        base_pay: basePay,
+        view_bonus_per_500: bonusPer100,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', activeChat.id);
+  
+    const lockMsg = {
+      deal_id: activeChat.id,
+      sender_id: currentUserId,
+      content: `🔒 Deal locked! ₹${basePay.toLocaleString()} advance + ₹${bonusPer100} per 100 views`
+    };
+    await supabase.from('messages').insert(lockMsg);
+  
+    setDealLocked(true);
+    toast('Deal Locked!', 'success');
+  
+    // Generate and download PDF
+    generateDealCertificate({
+      id: activeChat.id,
+      brand_name: activeChat.brand_name || currentBrandData?.business_name || 'Brand',
+      creator_handle: activeChat.creator_handle || currentCreatorData?.ig_handle || 'Creator',
+      base_pay: basePay,
+      view_bonus_per_500: bonusPer100,
+      created_at: activeChat.created_at,
+      locked_at: new Date().toISOString(),
+    });
+  
+    alert('🔒 Deal Locked!\n✅ Certificate downloaded automatically.');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'offered': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/20';
@@ -284,6 +369,13 @@ export default function ChatInterface({
                     <span className={`hidden md:inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${getStatusColor(activeChat.status)}`}>
                       {activeChat.status || 'pending'}
                     </span>
+                    {(activeChat.status === 'offered' || activeChat.status === 'negotiating') && (
+                      <button
+                        onClick={() => setShowDealPanel(!showDealPanel)}
+                        className="text-xs text-cyan-400 px-3 py-1 bg-cyan-500/20 rounded-full ml-2">
+                        💰 {showDealPanel ? 'Hide' : 'Show'} Terms
+                      </button>
+                    )}
                   </div>
                   <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
                     {activeChat.deal_value || 'Collaboration Offer'}
@@ -319,6 +411,25 @@ export default function ChatInterface({
                 )}
               </div>
             </div>
+
+            {dealLocked && activeChat && (
+              <div className="px-4 md:px-6 pt-4 pb-0">
+                <button
+                  onClick={() => generateDealCertificate({
+                    id: activeChat.id,
+                    brand_name: activeChat.brand_name || currentBrandData?.business_name || 'Brand',
+                    creator_handle: activeChat.creator_handle || currentCreatorData?.ig_handle || 'Creator',
+                    base_pay: activeChat.base_pay || basePay,
+                    view_bonus_per_500: activeChat.view_bonus_per_500 || bonusPer100,
+                    created_at: activeChat.created_at,
+                    locked_at: activeChat.updated_at || new Date().toISOString(),
+                  })}
+                  className="w-full py-2 border border-cyan-500/40 text-cyan-500 dark:text-cyan-400 text-sm font-medium rounded-xl flex items-center justify-center gap-2 mt-2"
+                >
+                  📄 Download Deal Certificate
+                </button>
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
@@ -356,6 +467,135 @@ export default function ChatInterface({
               )}
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Deal Negotiation Panel */}
+            {showDealPanel && (activeChat.status === 'offered' || activeChat.status === 'negotiating') && (
+              <div className="bg-neutral-900 border-t border-neutral-800 px-4 py-4">
+                
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-bold text-sm">
+                    💰 Deal Terms
+                  </h3>
+                  {dealLocked ? (
+                    <span className="text-green-400 text-xs font-bold 
+                                     bg-green-500/20 px-3 py-1 rounded-full">
+                      🔒 Locked
+                    </span>
+                  ) : (
+                    <span className="text-yellow-400 text-xs 
+                                     bg-yellow-500/20 px-3 py-1 rounded-full">
+                      Negotiating
+                    </span>
+                  )}
+                </div>
+              
+                {/* SLIDER 1 — Base/Advance Pay */}
+                <div className="mb-4">
+                  <div className="flex justify-between mb-1">
+                    <label className="text-neutral-400 text-xs">
+                      Advance Pay
+                    </label>
+                    <span className="text-cyan-400 font-bold text-sm">
+                      ₹{basePay.toLocaleString()}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={500} max={50000} step={500}
+                    value={basePay}
+                    disabled={dealLocked}
+                    onChange={e => {
+                      setBasePay(Number(e.target.value));
+                      handleUpdateDealTerms(Number(e.target.value), bonusPer100);
+                    }}
+                    className="w-full h-2 bg-neutral-700 rounded-full 
+                               appearance-none cursor-pointer
+                               accent-cyan-500 disabled:opacity-50"
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-neutral-600 text-xs">₹500</span>
+                    <span className="text-neutral-600 text-xs">₹50,000</span>
+                  </div>
+                </div>
+              
+                {/* SLIDER 2 — Bonus per 100 views */}
+                <div className="mb-4">
+                  <div className="flex justify-between mb-1">
+                    <label className="text-neutral-400 text-xs">
+                      Bonus per 100 views
+                    </label>
+                    <span className="text-orange-400 font-bold text-sm">
+                      ₹{bonusPer100}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0} max={500} step={10}
+                    value={bonusPer100}
+                    disabled={dealLocked}
+                    onChange={e => {
+                      setBonusPer100(Number(e.target.value));
+                      handleUpdateDealTerms(basePay, Number(e.target.value));
+                    }}
+                    className="w-full h-2 bg-neutral-700 rounded-full 
+                               appearance-none cursor-pointer
+                               accent-orange-500 disabled:opacity-50"
+                  />
+                  <div className="flex justify-between mt-1">
+                    <span className="text-neutral-600 text-xs">₹0</span>
+                    <span className="text-neutral-600 text-xs">₹500</span>
+                  </div>
+                </div>
+              
+                {/* CALCULATOR */}
+                <div className="bg-neutral-800 rounded-2xl p-3 mb-4">
+                  <p className="text-neutral-400 text-xs mb-2">
+                    📊 Earnings Calculator
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    {[10000, 50000, 100000].map(views => (
+                      <div key={views} 
+                           className="bg-neutral-900 rounded-xl p-2">
+                        <p className="text-neutral-500 text-xs">
+                          {views >= 100000 
+                            ? (views/100000) + 'L' 
+                            : (views/1000) + 'K'} views
+                        </p>
+                        <p className="text-white font-bold text-sm mt-1">
+                          ₹{(basePay + 
+                            Math.floor(views / 100) * bonusPer100
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-neutral-600 text-xs text-center mt-2">
+                    Advance ₹{basePay.toLocaleString()} + 
+                    ₹{bonusPer100}/100 views
+                  </p>
+                </div>
+              
+                {/* LOCK DEAL BUTTON */}
+                {!dealLocked ? (
+                  <button
+                    onClick={handleLockDeal}
+                    className="w-full py-3 bg-gradient-to-r 
+                               from-green-500 to-emerald-500
+                               text-white font-bold rounded-2xl
+                               flex items-center justify-center gap-2">
+                    🔒 Lock Deal
+                  </button>
+                ) : (
+                  <div className="w-full py-3 bg-green-500/20 
+                                  border border-green-500/40
+                                  text-green-400 font-bold rounded-2xl
+                                  flex items-center justify-center gap-2">
+                    ✅ Deal Locked — ₹{basePay.toLocaleString()} advance
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Input */}
             <div className="p-3 md:p-4 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800 shrink-0">
