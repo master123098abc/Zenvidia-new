@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SmartPitchModal from './SmartPitchModal';
 import { supabase } from '../lib/supabase';
+import { SafeBeholdWidget } from './SafeBeholdWidget';
 
 interface CreatorProfilePageProps {
   creator: any;
@@ -13,6 +14,7 @@ export default function CreatorProfilePage({ creator, onClose, currentUser }: Cr
   const [pitchTarget, setPitchTarget] = useState<any>(null);
   const [showIntro, setShowIntro] = useState(true);
   const [ytShorts, setYtShorts] = useState<any[]>([]);
+  const [beholdHidden, setBeholdHidden] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -182,6 +184,7 @@ export default function CreatorProfilePage({ creator, onClose, currentUser }: Cr
                   muted
                   loop
                   playsInline
+                  preload="none"
                 />
               );
             })}
@@ -231,14 +234,14 @@ export default function CreatorProfilePage({ creator, onClose, currentUser }: Cr
         )}
 
         {/* Behold widget */}
-        {creator.behold_feed_id && (
-          <div className="bg-neutral-950 rounded-2xl overflow-hidden mb-8 border border-neutral-900">
-            <behold-widget feed-id={creator.behold_feed_id} />
+        {creator.behold_feed_id && !beholdHidden && (
+          <div className="bg-neutral-950 rounded-2xl overflow-hidden mb-8 border border-neutral-900 flex justify-center">
+            <SafeBeholdWidget feedId={creator.behold_feed_id} onFail={() => setBeholdHidden(true)} />
           </div>
         )}
 
         {/* Empty state */}
-        {!creator.behold_feed_id && ytShorts.length === 0 && 
+        {(!creator.behold_feed_id || beholdHidden) && ytShorts.length === 0 && 
          ![1,2,3,4,5,6,7,8,9,10].some(i => creator[`reel_url_${i}`]) && (
           <div className="text-center py-16 bg-neutral-900/30 rounded-3xl border border-neutral-800 border-dashed">
             <p className="text-5xl mb-4">🎬</p>

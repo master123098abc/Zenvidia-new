@@ -9,6 +9,7 @@ interface ReelsFeedViewerProps {
 }
 
 import { YouTubeIframeWidget } from './YouTubeIframeWidget';
+import { SafeBeholdWidget } from './SafeBeholdWidget';
 
 const getYTHandle = (url: string): string => {
   try {
@@ -33,6 +34,7 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mountedIndices, setMountedIndices] = useState<Set<number>>(new Set([0]));
+  const [failedBeholds, setFailedBeholds] = useState<Set<number>>(new Set());
   
   const [audioEnabled, setAudioEnabled] = useState(() => {
     return localStorage.getItem('yt_audio_enabled') === 'true';
@@ -49,19 +51,19 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
   }, [audioEnabled]);
 
   useEffect(() => {
-    // Basic mount: just mount the current index (if swipe happens early, it'll mount)
-    // We do NOT aggressively preload next here anymore.
+    // Keep a sliding window of recent and upcoming indices mounted
     setMountedIndices(prev => {
       const nextSet = new Set<number>();
-      nextSet.add(currentIndex);
-      // Keep next index mounted if it was already preloaded
-      if (prev.has(currentIndex)) {
-         // Keep it.
+      // Keep current, previous, and next mounted (3 items)
+      for (let i = Math.max(0, currentIndex - 1); i <= currentIndex + 1; i++) {
+        if (i < cards.length) {
+          nextSet.add(i);
+        }
       }
       console.log(`Current index: ${currentIndex}. Mounted count: ${nextSet.size}`);
       return nextSet;
     });
-  }, [currentIndex]);
+  }, [currentIndex, cards.length]);
 
   useEffect(() => {
     const handlePreload = (e: any) => {
@@ -276,7 +278,10 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
           </button>
         </div>
       ) : (
-        cards.map((card, idx) => (
+        cards.map((card, idx) => {
+          if (card.type === 'behold' && failedBeholds.has(idx)) return null;
+          
+          return (
           <div 
             key={`item-${card.type}-${card.creator?.id || card.creator?.ig_handle}-${idx}`} 
             ref={el => cardRefs.current[idx] = el}
@@ -287,7 +292,9 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
             {/* BEHOLD card */}
             {card.type === 'behold' && (
               <div className="w-full h-full flex items-center justify-center pointer-events-none">
-                <behold-widget feed-id={card.creator.behold_feed_id} />
+                <SafeBeholdWidget feedId={card.creator.behold_feed_id} onFail={() => {
+                  setFailedBeholds(prev => new Set(prev).add(idx));
+                }} />
               </div>
             )}
 
@@ -317,9 +324,21 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
             )}
 
             {/* CLOUDINARY VIDEO card */}
-            {card.type === 'video' && (
+            {card.type === 'video' && Math.abs(currentIndex - idx) <= 2 && (
               <video
-                ref={el => videoRefs.current[idx] = el}
+                ref={el => {
+                  if (el) {
+                    videoRefs.current[idx] = el;
+                    // Play immediately if it's the current video and wasn't manually paused.
+                    // (Observer handles playback mostly, but sometimes it misses if already intersected)
+                    if (currentIndex === idx) {
+                       el.muted = !audioEnabledRef.current;
+                       el.play().catch(() => {});
+                    }
+                  } else {
+                    videoRefs.current[idx] = null;
+                  }
+                }}
                 src={card.url}
                 className="absolute inset-0 w-full h-full object-cover"
                 loop
@@ -414,7 +433,8 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
               </div>
             </div>
           </div>
-        ))
+        );
+      })
       )}
 
       {smartPitchOpen && selectedCreator && (

@@ -3,21 +3,11 @@ import { supabase } from '../lib/supabase';
 import { Instagram, Link as LinkIcon, Trash2, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { SafeBeholdWidget } from './SafeBeholdWidget';
+
 const CreatorReelsFeed = ({ feedId }: { feedId: string }) => {
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://w.behold.so/widget.js';
-    script.type = 'module';
-    document.head.appendChild(script);
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
-  
   return (
-    <behold-widget feed-id={feedId}></behold-widget>
+    <SafeBeholdWidget feedId={feedId} />
   );
 };
 

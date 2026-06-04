@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Instagram, Youtube, Loader2, ArrowDownToLine, PlaySquare } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fetchAndSaveYouTubeShorts } from '../lib/youtube';
+import { SafeBeholdWidget } from './SafeBeholdWidget';
 
 interface CreatorVideoFeedProps {
   creatorId?: string;
@@ -17,6 +18,8 @@ export default function CreatorVideoFeed({ creatorId, behold_feed_id, yt_url, is
     behold_feed_id ? 'instagram' : 'youtube'
   );
   
+  const [beholdHidden, setBeholdHidden] = useState(false);
+
   const [shorts, setShorts] = useState<any[]>(_shortsCache[creatorId || ''] || []);
   const [isImporting, setIsImporting] = useState(false);
   const [importUrl, setImportUrl] = useState('');
@@ -90,7 +93,7 @@ export default function CreatorVideoFeed({ creatorId, behold_feed_id, yt_url, is
     }
   };
 
-  if (!behold_feed_id && !yt_url && !isOwner && shorts.length === 0) {
+  if ((!behold_feed_id || beholdHidden) && !yt_url && !isOwner && shorts.length === 0) {
     return (
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 max-w-2xl w-full mx-auto text-center shadow-sm">
         <h3 className="text-xl font-bold mb-2">No portfolio yet</h3>
@@ -120,10 +123,11 @@ export default function CreatorVideoFeed({ creatorId, behold_feed_id, yt_url, is
 
   const ytEmbedUrl = yt_url ? getYoutubeEmbedUrl(yt_url) : null;
   const showYoutubeTab = yt_url || isOwner || shorts.length > 0;
+  const showInstagramTab = behold_feed_id && !beholdHidden;
 
   return (
     <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden max-w-2xl w-full mx-auto shadow-sm">
-      {(behold_feed_id && showYoutubeTab) && (
+      {(showInstagramTab && showYoutubeTab) && (
         <div className="flex border-b border-neutral-200 dark:border-neutral-800">
           <button
             onClick={() => setActiveTab('instagram')}
@@ -149,13 +153,16 @@ export default function CreatorVideoFeed({ creatorId, behold_feed_id, yt_url, is
       )}
 
       <div className="p-4 md:p-6 bg-neutral-950">
-        {(activeTab === 'instagram' || (!showYoutubeTab && behold_feed_id)) && behold_feed_id && (
-          <div className="w-full rounded-2xl overflow-hidden bg-black border border-neutral-800">
-            <behold-widget feed-id={behold_feed_id} />
+        {(activeTab === 'instagram' || (!showYoutubeTab && showInstagramTab)) && showInstagramTab && (
+          <div className="w-full rounded-2xl overflow-hidden bg-black border border-neutral-800 flex justify-center">
+            <SafeBeholdWidget feedId={behold_feed_id} onFail={() => {
+              setBeholdHidden(true);
+              setActiveTab('youtube');
+            }} />
           </div>
         )}
 
-        {(activeTab === 'youtube' || (!behold_feed_id && showYoutubeTab)) && (
+        {(activeTab === 'youtube' || !showInstagramTab) && showYoutubeTab && (
           <div className="flex flex-col gap-6">
             {isOwner && (
               <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 md:p-6">
@@ -189,16 +196,33 @@ export default function CreatorVideoFeed({ creatorId, behold_feed_id, yt_url, is
                   {shorts.map((short, i) => {
                     console.log('Embed rendered');
                     return (
-                      <div key={`${short.video_id || ''}-${i}`} className="aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-neutral-800 relative group">
+                      <div key={`${short.video_id || ''}-${i}`} className="aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-neutral-800 relative group cursor-pointer" onClick={() => {
+                        const el = document.getElementById(`yt-iframe-${short.video_id}`);
+                        if (el) {
+                          el.className = "w-full h-full object-cover z-10 relative";
+                          el.setAttribute('src', `${short.embed_url}?autoplay=1&playsinline=1`);
+                          const btn = document.getElementById(`yt-play-btn-${short.video_id}`);
+                          if (btn) btn.style.display = 'none';
+                        }
+                      }}>
+                        <img 
+                          src={short.thumbnail || `https://i.ytimg.com/vi/${short.video_id}/hqdefault.jpg`} 
+                          className="absolute inset-0 w-full h-full object-cover z-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                        <div id={`yt-play-btn-${short.video_id}`} className="absolute inset-0 flex items-center justify-center z-0">
+                           <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                             <PlaySquare className="w-6 h-6 text-white ml-1" />
+                           </div>
+                        </div>
                         <iframe
-                          src={short.embed_url}
+                          id={`yt-iframe-${short.video_id}`}
                           title={short.title}
                           frameBorder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
-                          className="w-full h-full"
+                          className="hidden"
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pointer-events-none">
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 pointer-events-none z-20">
                           <p className="text-white text-xs font-bold line-clamp-2">{short.title}</p>
                           <p className="text-neutral-300 text-[10px] mt-1">{short.views.toLocaleString()} views</p>
                         </div>
