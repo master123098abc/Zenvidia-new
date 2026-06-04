@@ -108,9 +108,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800"
+          className="relative w-full max-w-md max-h-[90vh] flex flex-col bg-white dark:bg-neutral-900 rounded-3xl overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800"
         >
-          <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="flex-shrink-0 flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
             <h2 className="text-2xl font-black font-display font-bold">Welcome</h2>
             <button 
               onClick={onClose}
@@ -120,7 +120,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="flex-1 overflow-y-auto p-6 pb-10">
             {/* Role Tabs */}
             <div className="flex p-1 bg-neutral-100 dark:bg-neutral-800 rounded-2xl mb-8">
               <button
