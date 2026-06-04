@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { fetchAndSaveYouTubeShorts } from '../lib/youtube';
-import { LogOut, Trash2, Camera, Moon, Sun, ChevronRight, CheckCircle2, Lock } from 'lucide-react';
+import { LogOut, Trash2, Camera, Moon, Sun, ChevronRight, CheckCircle2, Lock, Edit2, AlertCircle } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { View } from '../App';
 import { uploadToCloudinary } from '../lib/cloudinary';
@@ -27,8 +27,27 @@ export default function Settings({ user, setView }: SettingsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  
+  const [handleChanges, setHandleChanges] = useState<{date: string}[]>([]);
+  const [isEditingIgHandle, setIsEditingIgHandle] = useState(false);
+  const [hasUnsavedHandle, setHasUnsavedHandle] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+       const changes = JSON.parse(localStorage.getItem(`zenova_ig_changes_${user.id}`) || '[]');
+       const validChanges = changes.filter((c: {date: string}) => {
+         const past = new Date();
+         past.setDate(past.getDate() - 30);
+         return new Date(c.date) > past;
+       });
+       if (changes.length !== validChanges.length) {
+         localStorage.setItem(`zenova_ig_changes_${user.id}`, JSON.stringify(validChanges));
+       }
+       setHandleChanges(validChanges);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,6 +133,7 @@ export default function Settings({ user, setView }: SettingsProps) {
         payload.ig_url = profileData.ig_url;
         payload.yt_url = profileData.yt_url;
         payload.behold_feed_id = profileData.behold_feed_id;
+        payload.ig_handle = profileData.ig_handle;
         if (profileData.niche) payload.niche = profileData.niche;
         console.log("Saving creator:", payload);
       } else {
@@ -133,6 +153,14 @@ export default function Settings({ user, setView }: SettingsProps) {
       if (error) throw error;
       
       if (role === 'creator') {
+        if (hasUnsavedHandle) {
+          const newChanges = [...handleChanges, { date: new Date().toISOString() }];
+          setHandleChanges(newChanges);
+          setHasUnsavedHandle(false);
+          localStorage.setItem(`zenova_ig_changes_${user.id}`, JSON.stringify(newChanges));
+          setIsEditingIgHandle(false);
+        }
+
         const updated = { ...profileData };
         localStorage.setItem('zenova_creator', JSON.stringify(updated));
         localStorage.setItem('zenova_handle', updated.ig_handle || '');
@@ -307,11 +335,43 @@ export default function Settings({ user, setView }: SettingsProps) {
           {role === 'creator' && (
             <>
               <div>
-                <label className="block text-sm font-bold mb-2">Instagram Handle <Lock className="inline w-3 h-3 text-neutral-400" /></label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold">Instagram Handle</label>
+                  {handleChanges.length < 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingIgHandle(!isEditingIgHandle)}
+                      className="text-xs font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      {isEditingIgHandle ? 'Cancel' : 'Edit'}
+                    </button>
+                  ) : (
+                    <span className="text-xs font-bold text-neutral-400 flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Limit Reached (2/month)
+                    </span>
+                  )}
+                </div>
                 <input 
-                  type="text" readOnly value={profileData.ig_handle || ''}
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 text-neutral-500 font-mono"
+                  type="text" 
+                  readOnly={!isEditingIgHandle} 
+                  value={profileData.ig_handle || ''}
+                  onChange={(e) => {
+                    setProfileData({...profileData, ig_handle: e.target.value.replace(/^@/, '')});
+                    setHasUnsavedHandle(true);
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl border font-mono ${
+                    isEditingIgHandle 
+                      ? 'border-cyan-500 focus:ring-1 focus:ring-cyan-500 bg-transparent text-neutral-900 dark:text-white' 
+                      : 'border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 text-neutral-500'
+                  }`}
                 />
+                {isEditingIgHandle && (
+                  <p className="text-xs text-neutral-500 mt-2">
+                    You can change your handle {2 - handleChanges.length} more time(s) this month.
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

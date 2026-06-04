@@ -44,7 +44,6 @@ export default function Onboarding({ user, setView }: OnboardingProps) {
   const [success, setSuccess] = useState(false);
 
   // Creator fields
-  const [fullName, setFullName] = useState('');
   const [igHandle, setIgHandle] = useState('');
   const [followerCount, setFollowerCount] = useState('');
   const [primaryNiche, setPrimaryNiche] = useState('');
@@ -102,7 +101,7 @@ export default function Onboarding({ user, setView }: OnboardingProps) {
     }
   };
 
-  const isCreatorValid = fullName && igHandle && igUrl && followerCount && primaryNiche && primaryLanguage;
+  const isCreatorValid = igHandle && igUrl && followerCount && primaryNiche && primaryLanguage;
   const isBrandValid = phone.length === 10 && businessName && businessType;
 
   const handleSubmit = async (e: any) => {
@@ -308,7 +307,7 @@ export default function Onboarding({ user, setView }: OnboardingProps) {
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">@</span>
                     <input 
                       type="text" required
-                      value={igHandle} onChange={e => setIgHandle(e.target.value.replace('@',''))}
+                      value={igHandle} onChange={e => setIgHandle(e.target.value.replace(/^@/, ''))}
                       placeholder="yourhandle"
                       className="w-full pl-8 pr-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-cyan-500 bg-transparent"
                     />
@@ -320,7 +319,7 @@ export default function Onboarding({ user, setView }: OnboardingProps) {
                     Instagram Profile URL <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="url" required
+                    type="text" required
                     value={igUrl} onChange={e => setIgUrl(e.target.value)}
                     placeholder="https://instagram.com/yourhandle"
                     className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-cyan-500 bg-transparent"
@@ -332,7 +331,7 @@ export default function Onboarding({ user, setView }: OnboardingProps) {
                     YouTube Channel URL <span className="text-neutral-400 text-sm ml-1">(Optional)</span>
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={ytUrl} onChange={e => setYtUrl(e.target.value)}
                     placeholder="https://youtube.com/@yourchannel"
                     className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-cyan-500 bg-transparent"
@@ -464,7 +463,7 @@ export default function Onboarding({ user, setView }: OnboardingProps) {
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">@</span>
                     <input 
                       type="text"
-                      value={igHandle} onChange={e => setIgHandle(e.target.value.replace('@',''))}
+                      value={igHandle} onChange={e => setIgHandle(e.target.value.replace(/^@/, ''))}
                       placeholder="yourbrand"
                       className="w-full pl-8 pr-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-pink-500 bg-transparent"
                     />
