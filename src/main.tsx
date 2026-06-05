@@ -5,9 +5,15 @@ import './index.css';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.error('ServiceWorker registration failed: ', err);
-    });
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => {
+        console.log('SW_REGISTERED');
+        console.log('PWA_READY');
+        fetch('/manifest.json').then(() => console.log('MANIFEST_LOADED'));
+      })
+      .catch(err => {
+        console.error('ServiceWorker registration failed: ', err);
+      });
   });
 }
 

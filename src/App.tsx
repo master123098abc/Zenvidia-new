@@ -50,7 +50,23 @@ export default function App() {
   const [selectedCreatorForProfile, setSelectedCreatorForProfile] = useState<any>(null);
   const [profileReturnView, setProfileReturnView] = useState<'HOME' | 'REELS'>('HOME');
   const [showWelcomeTour, setShowWelcomeTour] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const isHandlingSession = useRef(false);
+
+  useEffect(() => {
+    // PWA Install Prompt handling
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      console.log('INSTALL_AVAILABLE');
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     if (user && (view === 'BRAND_DASHBOARD' || view === 'CREATOR_PORTAL')) {
@@ -395,6 +411,22 @@ export default function App() {
           isOpen={showAuthModal} 
           onClose={() => setShowAuthModal(false)} 
         />
+
+        {deferredPrompt && (
+          <button 
+            onClick={async () => {
+              deferredPrompt.prompt();
+              const { outcome } = await deferredPrompt.userChoice;
+              if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+                console.log('PWA installed');
+              }
+            }}
+            className="fixed bottom-24 right-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white px-5 py-3 rounded-full font-bold shadow-lg z-50 flex items-center gap-2"
+          >
+            📱 Install App
+          </button>
+        )}
 
         {showWelcomeTour && user && (
           <WelcomeTour
