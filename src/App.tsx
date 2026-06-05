@@ -310,6 +310,7 @@ export default function App() {
           {view === 'HOME' && (
             <Marketplace 
               user={user} 
+              userRole={localStorage.getItem('zenova_brand') ? 'BRAND' : localStorage.getItem('zenova_creator') ? 'CREATOR' : null}
               onOpenAuth={() => setShowAuthModal(true)} 
               onDealCreated={handleDealCreated}
               onCreatorClick={(creator) => {
@@ -317,6 +318,8 @@ export default function App() {
                 setProfileReturnView('HOME');
                 setView('CREATOR_PROFILE');
               }}
+              onCreatorPortal={() => setView('CREATOR_PORTAL')}
+              onSettings={() => setView('SETTINGS')}
             />
           )}
             

@@ -9,35 +9,35 @@ const brandSteps = [
   {
     emoji: '👋',
     title: 'Welcome to Zenvidia!',
-    description: 'Northeast India ka pehla influencer marketplace. Yahan local creators aapke brand ke liye kaam karte hain.'
+    description: "Northeast India's premier influencer marketplace. Connect with verified local creators to elevate your brand."
   },
   {
     emoji: '🔍',
-    title: 'Creators Dhundho',
-    description: 'Marketplace mein browse karo. Niche, city, followers ke hisaab se filter karo. Apne brand ke liye perfect creator dhundho.'
+    title: 'Discover Talented Creators',
+    description: 'Browse the marketplace and filter by niche, city, or followers to find the perfect match for your brand campaigns.'
   },
   {
     emoji: '💰',
-    title: 'Offer Bhejo & Deal Karo',
-    description: '"Send Offer" dabao → advance pay + bonus set karo → deal lock karo → certificate download karo. Itna simple!'
+    title: 'Send Offers & Finalize Deals',
+    description: 'Click "Send Offer", set an advance payment and performance bonuses, lock the deal, and automatically generate a digital certificate.'
   }
 ];
 
 const creatorSteps = [
   {
     emoji: '🎉',
-    title: 'Welcome Creator!',
-    description: 'Zenvidia pe aane ke liye shukriya! Yahan local brands tujhe dhundhte hain collab ke liye.'
+    title: 'Welcome, Creator!',
+    description: 'Thank you for joining Zenvidia! Local brands are actively looking to collaborate with you.'
   },
   {
     emoji: '📸',
-    title: 'Profile Complete Karo',
-    description: 'Settings mein jaao → Instagram URL, YouTube link, aur Behold Feed ID daalo. Zyada complete profile = zyada offers!'
+    title: 'Complete Your Profile',
+    description: 'Go to Settings and add your Instagram URL, YouTube link, and Behold Feed ID. A complete profile attracts more offers!'
   },
   {
     emoji: '🤝',
-    title: 'Deals Accept Karo',
-    description: 'Brand offer bhejega → Chat mein terms negotiate karo → Deal lock karo → Paisa lo! Zenvidia sirf 5% lega.'
+    title: 'Accept Deals & Get Paid',
+    description: 'Receive brand offers, negotiate terms in chat, finalize the deal, and get paid! Zenvidia only takes a minimal 5% platform fee.'
   }
 ];
 
