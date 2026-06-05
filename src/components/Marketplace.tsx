@@ -242,6 +242,101 @@ export default function Marketplace({ user, onOpenAuth, onDealCreated, onSendOff
   return (
     <div className="w-full bg-black min-h-screen">
       <PullToRefresh onRefresh={fetchData}>
+        {/* HERO SECTION */}
+        <div className="px-4 pt-6 pb-4">
+          
+          {/* Main headline */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-2 
+                            bg-cyan-500/10 border border-cyan-500/30 
+                            text-cyan-400 text-xs font-bold px-3 py-1 
+                            rounded-full mb-3">
+              🏔️ Northeast India's #1
+            </div>
+            
+            <h1 className="text-3xl font-black text-white 
+                           leading-tight mb-2">
+              Connect Brands with<br />
+              <span className="bg-gradient-to-r from-cyan-400 
+                               to-orange-400 bg-clip-text 
+                               text-transparent">
+                Local Creators
+              </span>
+            </h1>
+            
+            <p className="text-neutral-400 text-sm leading-relaxed 
+                          max-w-xs mx-auto">
+              Find verified Instagram & YouTube creators in 
+              Guwahati and Northeast India. Send offers, 
+              negotiate deals, grow together.
+            </p>
+          </div>
+
+          {/* Who is it for */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="bg-neutral-900 border border-cyan-500/20 
+                            rounded-2xl p-3 text-center">
+              <p className="text-2xl mb-1">🏢</p>
+              <p className="text-white font-bold text-sm">
+                For Brands
+              </p>
+              <p className="text-neutral-500 text-xs mt-1">
+                Find creators, send offers, grow your brand
+              </p>
+            </div>
+            <div className="bg-neutral-900 border border-orange-500/20 
+                            rounded-2xl p-3 text-center">
+              <p className="text-2xl mb-1">🎨</p>
+              <p className="text-white font-bold text-sm">
+                For Creators
+              </p>
+              <p className="text-neutral-500 text-xs mt-1">
+                Get paid collabs, grow your audience
+              </p>
+            </div>
+          </div>
+
+          {/* CTA buttons */}
+          <div className="flex gap-3 mb-2">
+            <button
+              onClick={() => onOpenAuth()}
+              className="flex-1 py-3 bg-gradient-to-r 
+                         from-cyan-500 to-orange-500
+                         text-white font-bold rounded-2xl 
+                         text-sm shadow-lg">
+              🚀 Get Your First Campaign
+            </button>
+          </div>
+          
+          <button
+            onClick={() => onOpenAuth()}
+            className="w-full py-2.5 border border-neutral-700
+                       text-neutral-400 rounded-2xl text-sm
+                       hover:border-cyan-500 hover:text-cyan-400
+                       transition-colors">
+            Join as Creator →
+          </button>
+
+          {/* Social proof */}
+          <div className="flex items-center justify-center 
+                          gap-4 mt-4 text-xs text-neutral-600">
+            <span>✅ Free to join</span>
+            <span>•</span>
+            <span>🔒 Secure deals</span>
+            <span>•</span>
+            <span>📍 Northeast India</span>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="px-4 mb-4">
+          <div className="border-t border-neutral-800" />
+          <p className="text-neutral-500 text-xs text-center 
+                        mt-3 mb-0">
+            Browse Creators & Brands ↓
+          </p>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-2 p-4 pb-0 max-w-4xl mx-auto">
           <button 

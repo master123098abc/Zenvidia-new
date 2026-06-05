@@ -285,13 +285,15 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
           <div 
             key={`item-${card.type}-${card.creator?.id || card.creator?.ig_handle}-${idx}`} 
             ref={el => cardRefs.current[idx] = el}
-            className="w-full h-screen flex-shrink-0 relative snap-start snap-always bg-black" 
-            style={{ scrollSnapAlign: 'start', height: '100vh' }}
+            className="w-full h-screen flex-shrink-0 relative flex items-center justify-center snap-start snap-always bg-black" 
+            style={{ scrollSnapAlign: 'start', height: '100dvh' }}
           >
+            {/* Aspect Ratio Constraint Box */}
+            <div className="w-full max-h-[100dvh] aspect-[9/16] relative flex items-center justify-center overflow-hidden">
             
             {/* BEHOLD card */}
             {card.type === 'behold' && (
-              <div className="w-full h-full flex items-center justify-center pointer-events-none">
+              <div className="absolute inset-0 w-full h-full flex items-center justify-center">
                 <SafeBeholdWidget feedId={card.creator.behold_feed_id} onFail={() => {
                   setFailedBeholds(prev => new Set(prev).add(idx));
                 }} />
@@ -300,65 +302,70 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
 
             {/* YOUTUBE card */}
             {card.type === 'youtube' && (
-              <div className="absolute inset-0 w-full h-full bg-neutral-900 flex items-center justify-center">
-                 <YouTubeIframeWidget
-                   channelUrl={getYTHandle(card.creator.yt_url)}
-                   idx={idx}
-                   isActive={idx === currentIndex}
-                   isMounted={mountedIndices.has(idx)}
-                 />
+              <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center pointer-events-none">
+                 <div className="w-full h-full relative bg-neutral-900 pointer-events-auto">
+                   <YouTubeIframeWidget
+                     channelUrl={getYTHandle(card.creator.yt_url)}
+                     idx={idx}
+                     isActive={idx === currentIndex}
+                     isMounted={mountedIndices.has(idx)}
+                   />
+                 </div>
               </div>
             )}
 
             {/* NEW YOUTUBE SHORTS card form the table */}
             {card.type === 'youtube_short' && (
-              <div className="absolute inset-0 w-full h-full bg-neutral-900 flex items-center justify-center">
-                 <YouTubeIframeWidget
-                   videoId={card.videoId}
-                   thumbnail={card.thumbnail}
-                   idx={idx}
-                   isActive={idx === currentIndex}
-                   isMounted={mountedIndices.has(idx)}
-                 />
+              <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center pointer-events-none">
+                 <div className="w-full h-full relative bg-neutral-900 pointer-events-auto">
+                   <YouTubeIframeWidget
+                     videoId={card.videoId}
+                     thumbnail={card.thumbnail}
+                     idx={idx}
+                     isActive={idx === currentIndex}
+                     isMounted={mountedIndices.has(idx)}
+                   />
+                 </div>
               </div>
             )}
 
             {/* CLOUDINARY VIDEO card */}
             {card.type === 'video' && Math.abs(currentIndex - idx) <= 2 && (
-              <video
-                ref={el => {
-                  if (el) {
-                    videoRefs.current[idx] = el;
-                    // Play immediately if it's the current video and wasn't manually paused.
-                    // (Observer handles playback mostly, but sometimes it misses if already intersected)
-                    if (currentIndex === idx) {
-                       el.muted = !audioEnabledRef.current;
-                       el.play().catch(() => {});
-                    }
-                  } else {
-                    videoRefs.current[idx] = null;
-                  }
-                }}
-                src={card.url}
-                className="absolute inset-0 w-full h-full object-cover"
-                loop
-                muted
-                playsInline
-                onTimeUpdate={(e) => {
-                  const target = e.target as HTMLVideoElement;
-                  if (target.duration) {
-                    const pct = target.currentTime / target.duration;
-                    if (pct >= 0.2 && pct < 0.25) {
-                      if (!(window as any)[`preloadTriggered_cloud_${idx}`]) {
-                        (window as any)[`preloadTriggered_cloud_${idx}`] = true;
-                        console.log('PRELOAD_TRIGGER_20');
-                        const customEvt = new CustomEvent('yt-preload-next', { detail: { idx } });
-                        window.dispatchEvent(customEvt);
+              <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center pointer-events-none">
+                <div className="w-full h-full relative bg-neutral-900 overflow-hidden pointer-events-auto">
+                  <video
+                    ref={el => {
+                      if (el) {
+                        videoRefs.current[idx] = el;
+                        if (currentIndex === idx) {
+                           el.muted = !audioEnabledRef.current;
+                           el.play().catch(() => {});
+                        }
+                      } else {
+                        videoRefs.current[idx] = null;
                       }
-                    }
-                  }
-                }}
-              />
+                    }}
+                    src={card.url}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loop
+                    muted
+                    playsInline
+                    onTimeUpdate={(e) => {
+                      const target = e.target as HTMLVideoElement;
+                      if (target.duration) {
+                        const pct = target.currentTime / target.duration;
+                        if (pct >= 0.2 && pct < 0.25) {
+                          if (!(window as any)[`preloadTriggered_cloud_${idx}`]) {
+                            (window as any)[`preloadTriggered_cloud_${idx}`] = true;
+                            const customEvt = new CustomEvent('yt-preload-next', { detail: { idx } });
+                            window.dispatchEvent(customEvt);
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             )}
 
             {/* Sound Enable button if blocked */}
@@ -373,6 +380,8 @@ export default function ReelsFeedViewer({ onClose, onCreatorClick }: ReelsFeedVi
                 <Volume2 className="w-5 h-5" /> Enable sound
               </button>
             )}
+
+            </div> {/* End Aspect Ratio Constraint Box */}
 
             {/* Hire / Collab Button */}
             <button

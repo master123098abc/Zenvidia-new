@@ -17,6 +17,7 @@ import CreatorProfilePage from './components/CreatorProfilePage';
 import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
 import { ToastContainer, toast } from './lib/toast';
+import WelcomeTour from './components/WelcomeTour';
 
 export type View =
   | 'HOME'
@@ -48,7 +49,20 @@ export default function App() {
   const [initialChatDealId, setInitialChatDealId] = useState<string | null>(null);
   const [selectedCreatorForProfile, setSelectedCreatorForProfile] = useState<any>(null);
   const [profileReturnView, setProfileReturnView] = useState<'HOME' | 'REELS'>('HOME');
+  const [showWelcomeTour, setShowWelcomeTour] = useState(false);
   const isHandlingSession = useRef(false);
+
+  useEffect(() => {
+    if (user && (view === 'BRAND_DASHBOARD' || view === 'CREATOR_PORTAL')) {
+      const hasSeenTour = localStorage.getItem('zenvidia_seen_onboarding');
+      // If we haven't seen it, show it.
+      if (!hasSeenTour) {
+        // slight delay looks nice
+        const timer = setTimeout(() => setShowWelcomeTour(true), 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, view]);
 
   const handleDealCreated = (dealId: string) => {
     setInitialChatDealId(dealId);
@@ -378,6 +392,13 @@ export default function App() {
           isOpen={showAuthModal} 
           onClose={() => setShowAuthModal(false)} 
         />
+
+        {showWelcomeTour && user && (
+          <WelcomeTour
+            userRole={localStorage.getItem('zenova_brand') ? 'BRAND' : 'CREATOR'}
+            onClose={() => setShowWelcomeTour(false)}
+          />
+        )}
       </div>
     </div>
   );
