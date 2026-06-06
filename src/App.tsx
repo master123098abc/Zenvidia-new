@@ -19,6 +19,11 @@ import AdminDashboard from './components/AdminDashboard';
 import { ToastContainer, toast } from './lib/toast';
 import WelcomeTour from './components/WelcomeTour';
 
+import { CameraRecorder } from './components/CameraRecorder';
+import { DraftsGallery } from './components/DraftsGallery';
+import { Plus } from 'lucide-react';
+import { uploadToCloudinary } from './lib/cloudinary';
+
 export type View =
   | 'HOME'
   | 'BRAND_DASHBOARD'
@@ -31,7 +36,9 @@ export type View =
   | 'INBOX'
   | 'REELS'
   | 'SETTINGS'
-  | 'CREATOR_PROFILE';
+  | 'CREATOR_PROFILE'
+  | 'CAMERA'
+  | 'DRAFTS';
 
 export default function App() {
   const [view, setView] = useState<View>('HOME');
@@ -51,6 +58,7 @@ export default function App() {
   const [profileReturnView, setProfileReturnView] = useState<'HOME' | 'REELS'>('HOME');
   const [showWelcomeTour, setShowWelcomeTour] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showUploadMenu, setShowUploadMenu] = useState(false);
   const isHandlingSession = useRef(false);
 
   useEffect(() => {
@@ -102,6 +110,13 @@ export default function App() {
       document.removeEventListener('openAuthModal', openAuthListener);
     };
   }, []);
+
+  useEffect(() => {
+    if (!showUploadMenu) return;
+    const close = () => setShowUploadMenu(false);
+    setTimeout(() => document.addEventListener('click', close), 100);
+    return () => document.removeEventListener('click', close);
+  }, [showUploadMenu]);
 
   const handleSessionUser = async (authUser: User | null | undefined, isInitialLoad: boolean) => {
     console.log('1. handleSessionUser called', authUser?.email, isInitialLoad);
@@ -313,6 +328,8 @@ export default function App() {
     );
   }
 
+  const userRole = localStorage.getItem('zenova_brand') ? 'BRAND' : localStorage.getItem('zenova_creator') ? 'CREATOR' : null;
+
   return (
     <div className="bg-gradient-to-br from-[#1CA6A6]/10 via-white to-[#F18237]/10 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950 min-h-screen dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 transition-colors duration-300">
       {showIntro && <IntroSequence onComplete={() => setShowIntro(false)} />}
@@ -353,6 +370,22 @@ export default function App() {
                 return (
                   <>
                     <CreatorProfileHeader creator={creatorData} />
+
+                    <div className="flex gap-4 mb-4">
+                      <button 
+                        onClick={() => setView('CAMERA')}
+                        className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white py-3 rounded-xl font-bold hover:scale-105 transition-transform"
+                      >
+                        📹 Record Reel
+                      </button>
+                      <button 
+                        onClick={() => setView('DRAFTS')}
+                        className="flex-1 bg-neutral-900 border border-white/10 text-white py-3 rounded-xl font-bold hover:bg-neutral-800 transition-colors"
+                      >
+                        📁 My Drafts
+                      </button>
+                    </div>
+
                     <CreatorVideoFeed 
                       creatorId={user?.id || ''}
                       behold_feed_id={creatorData?.behold_feed_id}
@@ -373,6 +406,8 @@ export default function App() {
               })()}
             </div>
           )}
+          {view === 'CAMERA' && <CameraRecorder onClose={() => setView('CREATOR_PORTAL')} />}
+          {view === 'DRAFTS' && <DraftsGallery onClose={() => setView('CREATOR_PORTAL')} />}
           {view === 'ADMIN_DASHBOARD' && <AdminDashboard />}
           {(view === 'INBOX' || view === 'CHAT') && (
             <ChatInterface
@@ -403,6 +438,119 @@ export default function App() {
           )}
           {view === 'SETTINGS' && <Settings user={user} setView={handleSetView} />}
         </main>
+
+        {user && 
+         view !== 'CAMERA' && 
+         view !== 'REELS' && (
+          <div className="fixed bottom-20 left-1/2 
+                          -translate-x-1/2 z-40">
+            <button
+              onClick={() => setShowUploadMenu(!showUploadMenu)}
+              className="w-14 h-14 bg-gradient-to-r 
+                         from-cyan-500 to-orange-500
+                         rounded-full shadow-2xl shadow-cyan-500/30
+                         flex items-center justify-center
+                         active:scale-95 transition-transform">
+              <Plus className="w-7 h-7 text-white font-black" />
+            </button>
+
+            {/* Upload menu popup */}
+            {showUploadMenu && (
+              <div className="absolute bottom-16 left-1/2 
+                              -translate-x-1/2 
+                              bg-neutral-900 border border-neutral-800 
+                              rounded-2xl overflow-hidden
+                              shadow-2xl w-48">
+                
+                <button
+                  onClick={() => {
+                    setShowUploadMenu(false);
+                    setView('CAMERA');
+                  }}
+                  className="w-full flex items-center gap-3 
+                             px-4 py-3 hover:bg-neutral-800 
+                             transition-colors">
+                  <div className="w-8 h-8 bg-red-500/20 rounded-full 
+                                  flex items-center justify-center">
+                    <span className="text-lg">📹</span>
+                  </div>
+                  <span className="text-white text-sm font-medium">
+                    Record Reel
+                  </span>
+                </button>
+
+                <div className="border-t border-neutral-800" />
+
+                <button
+                  onClick={() => {
+                    setShowUploadMenu(false);
+                    // Open file picker for existing video
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'video/*';
+                    input.onchange = async (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (!file) return;
+                      try {
+                        const url = await uploadToCloudinary(file, 'video');
+                        // Save to creator profile
+                        const creator = JSON.parse(
+                          localStorage.getItem('zenova_creator') || '{}'
+                        );
+                        const slots = Array.from({length: 10}, 
+                          (_, i) => `reel_url_${i+1}`);
+                        const emptySlot = slots.find(s => !creator[s]);
+                        if (emptySlot && creator.id) {
+                          await supabase.from('creators')
+                            .update({ [emptySlot]: url })
+                            .eq('id', creator.id);
+                          creator[emptySlot] = url;
+                          localStorage.setItem('zenova_creator', 
+                            JSON.stringify(creator));
+                          alert('✅ Reel uploaded!');
+                        } else {
+                          alert('All 10 reel slots full!');
+                        }
+                      } catch (err: any) {
+                        alert('Upload failed: ' + err.message);
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="w-full flex items-center gap-3 
+                             px-4 py-3 hover:bg-neutral-800 
+                             transition-colors">
+                  <div className="w-8 h-8 bg-cyan-500/20 rounded-full 
+                                  flex items-center justify-center">
+                    <span className="text-lg">📁</span>
+                  </div>
+                  <span className="text-white text-sm font-medium">
+                    Upload Video
+                  </span>
+                </button>
+
+                <div className="border-t border-neutral-800" />
+
+                <button
+                  onClick={() => {
+                    setShowUploadMenu(false);
+                    setView('DRAFTS');
+                  }}
+                  className="w-full flex items-center gap-3 
+                             px-4 py-3 hover:bg-neutral-800 
+                             transition-colors">
+                  <div className="w-8 h-8 bg-orange-500/20 rounded-full 
+                                  flex items-center justify-center">
+                    <span className="text-lg">🎬</span>
+                  </div>
+                  <span className="text-white text-sm font-medium">
+                    My Drafts
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <BottomNav 
           view={view} 
