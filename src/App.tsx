@@ -263,15 +263,11 @@ export default function App() {
           return;
         }
 
-        const timeoutPromise = new Promise((resolve) =>
-          setTimeout(() => resolve({ data: { session: null } }), 3000)
-        );
-        const sessionPromise = supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        const { data: { session } } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
+        if (error) {
+          console.error("Auth session check error:", error.message);
+        }
 
         if (session?.user) {
           console.log('AUTH session found');
@@ -308,6 +304,14 @@ export default function App() {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-[#1CA6A6]/10 via-white to-[#F18237]/10 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950 min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#1CA6A6]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gradient-to-br from-[#1CA6A6]/10 via-white to-[#F18237]/10 dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-950 min-h-screen dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 transition-colors duration-300">
