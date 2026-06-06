@@ -4,7 +4,7 @@ export const CLOUD_CONFIG = {
     uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || ""
   },
   ACCOUNT_B: {
-    cloudName: "dwwusk8rq",
-    uploadPreset: "hariom_upload"
+    cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME_B || "dwwusk8rq",
+    uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET_B || "hariom_upload"
   }
 };
