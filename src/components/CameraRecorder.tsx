@@ -21,14 +21,22 @@ export const CameraRecorder: React.FC<CameraRecorderProps> = ({ onClose }) => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [maxTime] = useState(60); // 60 second max
   const [selectedFilter, setSelectedFilter] = useState('none');
+  const [zoom, setZoom] = useState(1);
+  const [lastDistance, setLastDistance] = useState(0);
+  const [beautyMode, setBeautyMode] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<{x: number, y: number} | null>(null);
 
   const filters = [
-    { name: 'Normal', value: 'none', css: '' },
-    { name: 'Vivid', value: 'vivid', css: 'saturate(1.8) contrast(1.1)' },
-    { name: 'Cool', value: 'cool', css: 'hue-rotate(30deg) saturate(1.2)' },
-    { name: 'Warm', value: 'warm', css: 'sepia(0.4) saturate(1.3)' },
-    { name: 'B&W', value: 'bw', css: 'grayscale(1)' },
-    { name: 'Drama', value: 'drama', css: 'contrast(1.5) brightness(0.9)' },
+    { name: '✨ Clear', value: 'none', css: 'none', preview: 'bg-white' },
+    { name: '🌸 Bloom', value: 'bloom', css: 'brightness(1.15) saturate(1.3) contrast(0.95) hue-rotate(340deg)', preview: 'bg-pink-200' },
+    { name: '🌙 Moon', value: 'moon', css: 'brightness(0.9) saturate(0.8) contrast(1.1) hue-rotate(200deg)', preview: 'bg-blue-200' },
+    { name: '☀️ Golden', value: 'golden', css: 'brightness(1.1) saturate(1.4) sepia(0.3) contrast(1.05)', preview: 'bg-yellow-200' },
+    { name: '🌿 Fresh', value: 'fresh', css: 'brightness(1.05) saturate(1.5) hue-rotate(30deg) contrast(1.1)', preview: 'bg-green-200' },
+    { name: '💜 Dream', value: 'dream', css: 'brightness(1.1) saturate(1.2) hue-rotate(280deg) contrast(0.95)', preview: 'bg-purple-200' },
+    { name: '🖤 Noir', value: 'noir', css: 'grayscale(1) contrast(1.3) brightness(0.9)', preview: 'bg-neutral-400' },
+    { name: '🌺 Rose', value: 'rose', css: 'brightness(1.1) saturate(1.6) hue-rotate(330deg) contrast(1.0)', preview: 'bg-rose-200' },
+    { name: '❄️ Ice', value: 'ice', css: 'brightness(1.2) saturate(0.7) contrast(1.1) hue-rotate(190deg)', preview: 'bg-cyan-100' },
+    { name: '🔥 Vibe', value: 'vibe', css: 'brightness(1.05) saturate(2) contrast(1.2)', preview: 'bg-orange-300' },
   ];
 
   useEffect(() => {
@@ -47,8 +55,18 @@ export const CameraRecorder: React.FC<CameraRecorderProps> = ({ onClose }) => {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: 1080, height: 1920 },
-        audio: true
+        video: {
+          facingMode: facing,
+          width: { ideal: 1920, max: 3840 },
+          height: { ideal: 1080, max: 2160 },
+          frameRate: { ideal: 60, max: 60 },
+          aspectRatio: { ideal: 9/16 },
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        }
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -154,7 +172,8 @@ export const CameraRecorder: React.FC<CameraRecorderProps> = ({ onClose }) => {
     );
   }
 
-  const currentFilterCss = filters.find(f => f.value === selectedFilter)?.css || '';
+  const currentFilterCss = filters.find(f => f.value === selectedFilter)?.css || 'none';
+  const beautyCSS = beautyMode ? 'brightness(1.08) contrast(0.95) blur(0.3px)' : '';
 
   return (
     <div className="fixed inset-0 z-[100] w-full min-h-screen bg-black flex flex-col">
@@ -175,6 +194,31 @@ export const CameraRecorder: React.FC<CameraRecorderProps> = ({ onClose }) => {
         </button>
       </div>
 
+      <button
+        onClick={() => setBeautyMode(b => !b)}
+        className={`absolute top-16 right-4 z-20
+                    w-10 h-10 rounded-full
+                    flex flex-col items-center justify-center
+                    text-xs font-bold transition
+        ${beautyMode 
+          ? 'bg-pink-500 text-white' 
+          : 'bg-black/50 text-neutral-400'}`}>
+        ✨
+        <span style={{ fontSize: '8px' }}>
+          {beautyMode ? 'ON' : 'OFF'}
+        </span>
+      </button>
+
+      {zoom > 1 && (
+        <div className="absolute top-16 left-1/2 
+                        -translate-x-1/2 z-20
+                        bg-black/60 px-3 py-1 rounded-full">
+          <span className="text-white text-sm font-bold">
+            {zoom.toFixed(1)}x
+          </span>
+        </div>
+      )}
+
       {/* Progress Bar (when recording) */}
       {isRecording && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-800 z-20">
@@ -186,15 +230,67 @@ export const CameraRecorder: React.FC<CameraRecorderProps> = ({ onClose }) => {
       )}
 
       {/* Video Preview */}
-      <div className="flex-1 relative overflow-hidden bg-black flex items-center justify-center">
+      <div 
+        className="flex-1 relative overflow-hidden bg-black flex items-center justify-center"
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) {
+            const dist = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY
+            );
+            setLastDistance(dist);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 2) {
+            const dist = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY
+            );
+            const delta = dist / lastDistance;
+            setZoom(z => Math.min(Math.max(z * delta, 1), 5));
+            setLastDistance(dist);
+          }
+        }}
+        onDoubleClick={() => setZoom(1)}
+        onTouchEnd={(e) => {
+          if (e.touches.length === 0 && 
+              e.changedTouches.length === 1) {
+            const touch = e.changedTouches[0];
+            const rect = e.currentTarget.getBoundingClientRect();
+            setFocusPoint({
+              x: touch.clientX - rect.left,
+              y: touch.clientY - rect.top,
+            });
+            setTimeout(() => setFocusPoint(null), 1000);
+          }
+        }}
+      >
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          style={{ filter: currentFilterCss }}
+          style={{ 
+            filter: `${currentFilterCss} ${beautyCSS}`.trim(),
+            transform: `scale(${zoom})`,
+            transition: 'filter 0.3s ease'
+          }}
           className="absolute inset-0 w-full h-full object-cover"
         />
+        
+        {focusPoint && (
+          <div 
+            className="absolute w-16 h-16 border-2 
+                       border-yellow-400 rounded-sm
+                       pointer-events-none z-20
+                       animate-ping"
+            style={{ 
+              left: focusPoint.x - 32, 
+              top: focusPoint.y - 32 
+            }}
+          />
+        )}
         
         {/* Recording Indicator */}
         {isRecording && (
@@ -209,17 +305,42 @@ export const CameraRecorder: React.FC<CameraRecorderProps> = ({ onClose }) => {
       <div className="bg-black pb-8 pt-4 relative z-10 w-full">
         {/* Filters */}
         {!isRecording && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-6 hide-scrollbar">
-            {filters.map(f => (
-              <button key={f.value}
-                onClick={() => setSelectedFilter(f.value)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors shadow-sm
-                ${selectedFilter === f.value 
-                  ? 'bg-cyan-500 text-white' 
-                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}`}>
-                {f.name}
-              </button>
-            ))}
+          <div className="absolute bottom-32 left-0 right-0 z-20">
+            <div className="flex gap-3 overflow-x-auto 
+                            px-4 pb-2 hide-scrollbar">
+              {filters.map(f => (
+                <button 
+                  key={f.value}
+                  onClick={() => setSelectedFilter(f.value)}
+                  className="flex-shrink-0 flex flex-col 
+                             items-center gap-1">
+                  
+                  {/* Filter preview circle */}
+                  <div className={`w-14 h-14 rounded-full 
+                                  border-3 transition-all
+                                  ${selectedFilter === f.value 
+                                    ? 'border-white scale-110 shadow-lg' 
+                                    : 'border-transparent'}`}>
+                    <div className={`w-full h-full rounded-full 
+                                     ${f.preview} relative overflow-hidden`}>
+                      {/* Mini camera icon inside */}
+                      <div className="absolute inset-0 flex items-center 
+                                      justify-center text-xs text-black font-bold opacity-30">
+                        {f.name.split(' ')[0]}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Filter name */}
+                  <span className={`text-xs font-medium transition
+                  ${selectedFilter === f.value 
+                    ? 'text-white' 
+                    : 'text-neutral-400'}`}>
+                    {f.name.split(' ')[1]}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
