@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { updateUserLocation, getNearbyCreators } from '../lib/locationService';
+import { getNearbyCreators, startContinuousTracking, stopContinuousTracking } from '../lib/locationService';
 import { supabase } from '../lib/supabase';
 import { Radar, MapPin, Navigation, UserPlus, AlertCircle, X } from 'lucide-react';
 
@@ -21,55 +21,84 @@ export const CrossPath: React.FC<CrossPathProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(true);
+  const [pulseActive, setPulseActive] = useState(false);
+  const [myCoords, setMyCoords] = useState<{lat: number, lon: number} | null>(null);
 
+  // Request Notification permission
   useEffect(() => {
-    let watchId: number;
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
-    const startTracking = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) throw new Error("Not authenticated");
-
-        if (!navigator.geolocation) {
-          throw new Error("Geolocation is not supported by your browser");
-        }
-
-        watchId = navigator.geolocation.watchPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            setError(null);
-            
-            try {
-               await updateUserLocation(session.user.id, latitude, longitude);
-               const nearby = await getNearbyCreators(session.user.id, latitude, longitude, 10); // 10km radius
-               setCreators(nearby || []);
-            } catch (err) {
-               console.error("Location update failed", err);
-            } finally {
-               setLoading(false);
-            }
-          },
-          (err) => {
-            console.error("Geolocation error:", err);
-            setError("Location permissions denied. Please enable location to find creators nearby.");
-            setLoading(false);
-            setScanning(false);
-          },
-          { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-        );
-      } catch (err: any) {
-        setError(err.message);
-        setLoading(false);
-        setScanning(false);
+  // Track proximity and trigger notifications
+  useEffect(() => {
+    const nearby100m = creators.filter(c => c.distance_km <= 0.1);
+    if (nearby100m.length > 0) {
+      setPulseActive(true);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const names = nearby100m.map(c => c.full_name || 'A creator').join(', ');
+        new Notification('Creator Nearby!', {
+          body: `${names} is within 100m of you.`
+        });
       }
+    } else {
+      setPulseActive(false);
+    }
+  }, [creators]);
+
+  // Start continuous geolocation tracking and Realtime subscription
+  useEffect(() => {
+    let userId = '';
+
+    const init = async () => {
+       const { data: { session } } = await supabase.auth.getSession();
+       if (!session?.user?.id) {
+         setError("Not authenticated");
+         setLoading(false);
+         setScanning(false);
+         return;
+       }
+       userId = session.user.id;
+
+       startContinuousTracking(
+         userId,
+         (coords, nearby) => {
+           setMyCoords({ lat: coords.latitude, lon: coords.longitude });
+           setCreators(nearby || []);
+           setError(null);
+           setLoading(false);
+         },
+         (err) => {
+           setError(err.message);
+           setLoading(false);
+           setScanning(false);
+         }
+       );
     };
 
-    startTracking();
+    init();
+
+    // Setup Supabase Realtime for instant updates when other creators move
+    const channel = supabase.channel('public:creators')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'creators' }, async () => {
+         // Re-fetch nearby creators if we have coordinates
+         if (userId && myCoords) {
+           try {
+             const nearby = await getNearbyCreators(userId, myCoords.lat, myCoords.lon, 10);
+             setCreators(nearby || []);
+           } catch {
+             // Silently fail if we can't fetch on realtime update
+           }
+         }
+      })
+      .subscribe();
 
     return () => {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
+      stopContinuousTracking();
+      channel.unsubscribe();
     };
-  }, []);
+  }, [myCoords?.lat, myCoords?.lon]);
 
   const handleConnect = (creatorName: string) => {
     console.log(`Connection request sent to ${creatorName}`);
@@ -106,6 +135,12 @@ export const CrossPath: React.FC<CrossPathProps> = ({ onClose }) => {
           {/* Radar UI */}
           <div className="flex justify-center my-8">
             <div className={`relative w-48 h-48 rounded-full border border-cyan-500/30 flex items-center justify-center ${scanning ? 'animate-[spin_4s_linear_infinite]' : ''}`}>
+               
+               {/* Radar Pulse Animation (<100m) */}
+               {pulseActive && (
+                 <div className="absolute -inset-4 rounded-full bg-red-500/20 animate-ping z-0" />
+               )}
+
                {/* Radar grids */}
                <div className="absolute inset-4 rounded-full border border-cyan-500/20" />
                <div className="absolute inset-10 rounded-full border border-cyan-500/10" />
@@ -117,7 +152,7 @@ export const CrossPath: React.FC<CrossPathProps> = ({ onClose }) => {
                )}
                
                {/* Center point */}
-               <div className="w-4 h-4 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] z-10 animate-pulse" />
+               <div className={`w-4 h-4 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] z-10 animate-pulse ${pulseActive ? 'bg-red-500 shadow-[0_0_25px_rgba(239,68,68,1)]' : 'bg-cyan-500'}`} />
             </div>
           </div>
 
@@ -143,7 +178,7 @@ export const CrossPath: React.FC<CrossPathProps> = ({ onClose }) => {
                  </div>
                  {creators.map((c, i) => (
                     <div key={c.id || i} 
-                         className="bg-neutral-900 border border-white/5 rounded-2xl p-4 flex gap-4 items-center shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-500"
+                         className={`bg-neutral-900 border rounded-2xl p-4 flex gap-4 items-center shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-500 ${c.distance_km <= 0.1 ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'border-white/5'}`}
                          style={{ animationDelay: `${i * 100}ms` }}
                     >
                        <img 
@@ -156,14 +191,14 @@ export const CrossPath: React.FC<CrossPathProps> = ({ onClose }) => {
                             {c.full_name || 'Creator'}
                           </h3>
                           <p className="text-cyan-400 text-xs font-medium">@{c.ig_handle || 'unknown'}</p>
-                          <div className="flex items-center gap-1 mt-2 text-neutral-500 text-[10px] font-bold tracking-wide">
+                          <div className={`flex items-center gap-1 mt-2 text-[10px] font-bold tracking-wide ${c.distance_km <= 0.1 ? 'text-red-400' : 'text-neutral-500'}`}>
                             <MapPin className="w-3 h-3" />
-                            {c.distance_km.toFixed(1)} KM AWAY
+                            {c.distance_km.toFixed(2)} KM AWAY
                           </div>
                        </div>
                        <button 
                          onClick={() => handleConnect(c.full_name || 'Creator')}
-                         className="w-10 h-10 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 flex items-center justify-center transition-colors border border-cyan-500/30"
+                         className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors border ${c.distance_km <= 0.1 ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/30' : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border-cyan-500/30'}`}
                        >
                          <UserPlus className="w-4 h-4" />
                        </button>
