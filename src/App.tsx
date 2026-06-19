@@ -187,7 +187,26 @@ export default function App() {
       }
 
       console.log('2. Checking role intent...');
-      const roleIntent = localStorage.getItem('zenvidia_role_intent');
+      let roleIntent = localStorage.getItem('zenvidia_role_intent');
+      
+      // If we have no local cache info, we need to carefully determine their role
+      // by checking if they already exist in either table.
+      if (!roleIntent && !cachedBrand && !cachedCreator) {
+        const { data: existingBrand } = await withTimeout<any>(
+          supabase.from('brands').select('*').eq('user_id', authUser.id).maybeSingle() as any
+        );
+        if (existingBrand) {
+          roleIntent = 'brand';
+        } else {
+          const { data: existingCreator } = await withTimeout<any>(
+            supabase.from('creators').select('*').eq('user_id', authUser.id).maybeSingle() as any
+          );
+          if (existingCreator) {
+            roleIntent = 'creator';
+          }
+        }
+      }
+
       const isBrand = roleIntent === 'brand' || cachedBrand;
 
       if (isBrand) {

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { X, MapPin, ShieldCheck, Instagram } from 'lucide-react';
+import { X, MapPin, ShieldCheck, Instagram, Globe } from 'lucide-react';
 
 interface CreatorProfileModalProps {
   creator: any;
@@ -20,6 +20,23 @@ export default function CreatorProfileModal({ creator, onClose, onOffer, collabT
 
   const handleYouTubeClick = () => {
     if (creator?.yt_url) window.open(creator.yt_url, '_blank');
+  };
+
+  const getWebsiteUrl = () => {
+    let url = creator?.website || creator?.website_url || creator?.url || creator?.site_url;
+    if (!url) return null;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    return url;
+  };
+
+  const websiteUrl = getWebsiteUrl();
+
+  const handleWebsiteClick = () => {
+    if (websiteUrl) {
+      window.open(websiteUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const isBrand = collabType === 'brand_collab';
@@ -131,6 +148,20 @@ export default function CreatorProfileModal({ creator, onClose, onOffer, collabT
               >
                 {isBrand ? 'Partner Up' : 'Send Offer'}
               </button>
+
+              {isBrand && (
+                <button
+                  onClick={handleWebsiteClick}
+                  disabled={!websiteUrl}
+                  className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm
+                    ${websiteUrl 
+                      ? 'bg-neutral-800 text-white hover:bg-neutral-700 border border-neutral-700' 
+                      : 'bg-neutral-900 border border-neutral-800 text-neutral-600 cursor-not-allowed'}`}
+                >
+                  <Globe className="w-4 h-4" />
+                  {websiteUrl ? 'Visit Website' : 'Website not available'}
+                </button>
+              )}
               
               {!isBrand && (
                 <div className="flex gap-2 w-full">
