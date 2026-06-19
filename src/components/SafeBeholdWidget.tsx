@@ -67,7 +67,6 @@ export const SafeBeholdWidget: React.FC<SafeBeholdWidgetProps> = ({ feedId, clas
 
   return (
     <div ref={containerRef} className={className}>
-      {/* @ts-expect-error custom element */}
       <behold-widget feed-id={feedId.trim()} onError={() => { setHasError(true); onFail?.(); }}></behold-widget>
     </div>
   );

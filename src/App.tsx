@@ -21,6 +21,8 @@ import WelcomeTour from './components/WelcomeTour';
 
 import { CameraRecorder } from './components/CameraRecorder';
 import { DraftsGallery } from './components/DraftsGallery';
+import { PublicStorePage } from './components/PublicStorePage';
+import BrandDashboard from './components/BrandDashboard';
 import { Plus } from 'lucide-react';
 import { uploadToCloudinary } from './lib/cloudinary';
 
@@ -38,7 +40,8 @@ export type View =
   | 'SETTINGS'
   | 'CREATOR_PROFILE'
   | 'CAMERA'
-  | 'DRAFTS';
+  | 'DRAFTS'
+  | 'STORE';
 
 export default function App() {
   const [view, setView] = useState<View>('HOME');
@@ -59,7 +62,17 @@ export default function App() {
   const [showWelcomeTour, setShowWelcomeTour] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showUploadMenu, setShowUploadMenu] = useState(false);
+  const [viewingStoreHandle, setViewingStoreHandle] = useState<string | null>(null);
   const isHandlingSession = useRef(false);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/store\/(.+)$/);
+    if (match) {
+      setViewingStoreHandle(match[1]);
+      setView('STORE');
+    }
+  }, []);
 
   useEffect(() => {
     // PWA Install Prompt handling
@@ -269,15 +282,6 @@ export default function App() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        if (!localStorage.getItem('zenova_db_cleared_v2')) {
-          await supabase.auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          localStorage.setItem('zenova_db_cleared_v2', 'true');
-          setLoading(false);
-          return;
-        }
-
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -361,7 +365,15 @@ export default function App() {
           )}
             
           {view === 'ONBOARDING' && <Onboarding user={user} setView={handleSetView} />}
-          {view === 'BRAND_DASHBOARD' && <div className="p-8 text-center text-2xl">Brand Dashboard</div>}
+          {view === 'BRAND_DASHBOARD' && (
+            <BrandDashboard 
+              user={user} 
+              brandData={localStorage.getItem('zenova_brand') ? JSON.parse(localStorage.getItem('zenova_brand') || '{}') : null} 
+            />
+          )}
+          {view === 'STORE' && viewingStoreHandle && (
+            <PublicStorePage brandHandle={viewingStoreHandle} />
+          )}
           {view === 'CREATOR_PORTAL' && (
             <div className="p-6 md:p-8 space-y-8">
               {/* Creator dashboard top header / links / video feed will be here */}

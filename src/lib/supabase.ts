@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { idbStorage } from './idbStorage';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/['"]/g, '');
 const supabaseKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/['"]/g, '');
@@ -12,7 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: window.localStorage,
+    storage: idbStorage,
     storageKey: 'zenvidia-auth'
   }
 });
