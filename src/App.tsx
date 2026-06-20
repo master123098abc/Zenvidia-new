@@ -282,13 +282,21 @@ export default function App() {
       }
     } catch (err: any) {
       console.warn('10. ERROR:', err.message || err);
-      toast('Could not load profile. Please refresh.', 'error');
+      toast('Could not load profile, but keeping you logged in.', 'error');
       setUser(authUser);
       
-      // Final safety check before onboarding
+      // Load offline from cache
       const stillCachedBrand = localStorage.getItem('zenova_brand');
       const stillCachedCreator = localStorage.getItem('zenova_creator');
-      if (!stillCachedBrand && !stillCachedCreator) {
+      const stillCachedAdmin = localStorage.getItem('zenova_admin');
+
+      if (stillCachedAdmin) {
+        setView('ADMIN_DASHBOARD');
+      } else if (stillCachedBrand) {
+        setView('BRAND_DASHBOARD');
+      } else if (stillCachedCreator) {
+        setView('CREATOR_PORTAL');
+      } else {
         setView('ONBOARDING');
       }
     } finally {
@@ -309,7 +317,7 @@ export default function App() {
 
         if (session?.user) {
           console.log('AUTH session found');
-          // Removed setUser(session.user) here to only mark as logged in after profile load
+          setUser(session.user);
           await handleSessionUser(session.user, true);
         } else {
           console.log('AUTH no session');
