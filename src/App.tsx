@@ -396,6 +396,7 @@ export default function App() {
             <BrandDashboard 
               user={user} 
               brandData={localStorage.getItem('zenova_brand') ? JSON.parse(localStorage.getItem('zenova_brand') || '{}') : null} 
+              onSettingsClick={() => setView('SETTINGS')}
             />
           )}
           {view === 'STORE' && viewingStoreHandle && (
@@ -408,7 +409,10 @@ export default function App() {
                 const creatorData = JSON.parse(localStorage.getItem('zenova_creator') || '{}');
                 return (
                   <>
-                    <CreatorProfileHeader creator={creatorData} />
+                    <CreatorProfileHeader 
+                      creator={creatorData} 
+                      onSettingsClick={() => setView('SETTINGS')}
+                    />
 
                     <div className="flex gap-4 mb-4">
                       <button 
@@ -595,6 +599,7 @@ export default function App() {
           view={view} 
           setView={handleSetView} 
           user={user} 
+          userRole={userRole}
           onOpenAuth={() => setShowAuthModal(true)} 
         />
 

@@ -1,26 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { StoreManager } from './StoreManager';
+import { Settings } from 'lucide-react';
 
 interface BrandDashboardProps {
   user: any;
   brandData: any;
   onLogout?: () => void;
+  onSettingsClick?: () => void;
 }
 
-export default function BrandDashboard({ user, brandData, onLogout }: BrandDashboardProps) {
+export default function BrandDashboard({ user, brandData, onLogout, onSettingsClick }: BrandDashboardProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'store'>('store');
 
   return (
     <div className="p-6 md:p-8 space-y-8 flex flex-col md:flex-row gap-6">
       <div className="w-full md:w-64 bg-neutral-900 rounded-2xl p-4 border border-neutral-800">
-        <div className="flex items-center gap-3 mb-6 p-2">
-          {brandData?.profile_url && (
-            <img src={brandData.profile_url} className="w-10 h-10 rounded-full object-cover" />
-          )}
-          <div>
-            <h2 className="text-white font-bold">{brandData?.business_name || 'Brand'}</h2>
-            <p className="text-neutral-500 text-xs">Dashboard</p>
+        <div className="flex items-center justify-between mb-6 p-2">
+          <div className="flex items-center gap-3">
+            {brandData?.profile_url && (
+              <img src={brandData.profile_url} className="w-10 h-10 rounded-full object-cover" />
+            )}
+            <div>
+              <h2 className="text-white font-bold">{brandData?.business_name || 'Brand'}</h2>
+              <p className="text-neutral-500 text-xs">Dashboard</p>
+            </div>
           </div>
+          <button 
+            onClick={onSettingsClick}
+            className="p-2 text-neutral-400 hover:text-white transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="space-y-2">

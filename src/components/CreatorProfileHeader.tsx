@@ -1,14 +1,27 @@
-import { Instagram, Youtube, MapPin, Users } from 'lucide-react';
+import { Instagram, Youtube, MapPin, Users, Settings } from 'lucide-react';
 
 interface CreatorProfileHeaderProps {
   creator: any;
+  onSettingsClick?: () => void;
 }
 
-export default function CreatorProfileHeader({ creator }: CreatorProfileHeaderProps) {
+export default function CreatorProfileHeader({ creator, onSettingsClick }: CreatorProfileHeaderProps) {
   if (!creator) return null;
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 md:p-8 max-w-2xl w-full mx-auto shadow-sm text-center md:text-left flex flex-col md:flex-row items-center gap-6 md:gap-8">
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 md:p-8 max-w-2xl w-full mx-auto shadow-sm flex flex-col md:flex-row items-center gap-6 md:gap-8 relative">
+      <div className="absolute top-4 right-4">
+        {onSettingsClick && (
+          <button 
+            onClick={onSettingsClick}
+            className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
       <div className="w-24 h-24 md:w-32 md:h-32 shrink-0 rounded-full overflow-hidden border-2 border-neutral-100 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800">
         {creator.profile_url ? (
           <img src={creator.profile_url} alt={creator.full_name || creator.ig_handle} className="w-full h-full object-cover" />

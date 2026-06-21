@@ -6,10 +6,11 @@ interface BottomNavProps {
   view: View;
   setView: (v: View) => void;
   user: User | null;
+  userRole?: string | null;
   onOpenAuth: () => void;
 }
 
-export default function BottomNav({ view, setView, user, onOpenAuth }: BottomNavProps) {
+export default function BottomNav({ view, setView, user, userRole, onOpenAuth }: BottomNavProps) {
   const hiddenViews: View[] = ['ONBOARDING', 'ADMIN_DASHBOARD', 'CHAT', 'REELS'];
   
   if (hiddenViews.includes(view)) return null;
@@ -19,12 +20,20 @@ export default function BottomNav({ view, setView, user, onOpenAuth }: BottomNav
       onOpenAuth();
       return;
     }
-    setView('SETTINGS');
+    if (userRole === 'BRAND') {
+      setView('BRAND_DASHBOARD');
+    } else if (userRole === 'CREATOR') {
+      setView('CREATOR_PORTAL');
+    } else {
+      setView('SETTINGS');
+    }
   };
 
   const handleReelsClick = () => {
     setView('REELS');
   };
+
+  const isProfileActive = view === 'SETTINGS' || view === 'BRAND_DASHBOARD' || view === 'CREATOR_PORTAL';
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 pb-[env(safe-area-inset-bottom)] bg-black/90 backdrop-blur-md border-t border-neutral-800 z-40 flex items-center justify-around px-2 text-xs font-medium">
@@ -56,7 +65,7 @@ export default function BottomNav({ view, setView, user, onOpenAuth }: BottomNav
 
       <button 
         onClick={handleAccountClick}
-        className={`flex flex-col items-center gap-1 p-2 ${view === 'SETTINGS' ? 'text-white' : 'text-neutral-500 hover:text-white transition-colors'}`}
+        className={`flex flex-col items-center gap-1 p-2 ${isProfileActive ? 'text-white' : 'text-neutral-500 hover:text-white transition-colors'}`}
       >
         <UserIcon className="w-6 h-6" />
         <span className="sr-only">Account</span>
