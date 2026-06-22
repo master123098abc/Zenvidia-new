@@ -25,6 +25,7 @@ import { PublicStorePage } from './components/PublicStorePage';
 import BrandDashboard from './components/BrandDashboard';
 import { Plus } from 'lucide-react';
 import { uploadToCloudinary } from './lib/cloudinary';
+import CreateWebsite from './components/CreateWebsite';
 
 export type View =
   | 'HOME'
@@ -41,7 +42,8 @@ export type View =
   | 'CREATOR_PROFILE'
   | 'CAMERA'
   | 'DRAFTS'
-  | 'STORE';
+  | 'STORE'
+  | 'CREATE_WEBSITE';
 
 export default function App() {
   const [view, setView] = useState<View>('HOME');
@@ -480,15 +482,29 @@ export default function App() {
             />
           )}
           {view === 'SETTINGS' && <Settings user={user} setView={handleSetView} />}
+          {view === 'CREATE_WEBSITE' && (
+            <CreateWebsite 
+              brandId={localStorage.getItem('zenova_brand') ? JSON.parse(localStorage.getItem('zenova_brand') || '{}').id : ''}
+              onClose={() => setView('BRAND_DASHBOARD')}
+              onSuccess={() => setView('BRAND_DASHBOARD')}
+            />
+          )}
         </main>
 
         {user && 
          view !== 'CAMERA' && 
-         view !== 'REELS' && (
+         view !== 'REELS' && 
+         view !== 'CREATE_WEBSITE' && (
           <div className="fixed bottom-20 left-1/2 
                           -translate-x-1/2 z-40">
             <button
-              onClick={() => setShowUploadMenu(!showUploadMenu)}
+              onClick={() => {
+                if (userRole === 'BRAND') {
+                  setView('CREATE_WEBSITE');
+                } else {
+                  setShowUploadMenu(!showUploadMenu);
+                }
+              }}
               className="w-14 h-14 bg-gradient-to-r 
                          from-cyan-500 to-orange-500
                          rounded-full shadow-2xl shadow-cyan-500/30

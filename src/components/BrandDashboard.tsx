@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StoreManager } from './StoreManager';
-import { Settings } from 'lucide-react';
+import { Settings, ExternalLink } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface BrandDashboardProps {
   user: any;
@@ -11,6 +12,20 @@ interface BrandDashboardProps {
 
 export default function BrandDashboard({ user, brandData, onLogout, onSettingsClick }: BrandDashboardProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'store'>('store');
+  const [websites, setWebsites] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (brandData?.id) {
+      loadWebsites();
+    }
+  }, [brandData?.id]);
+
+  const loadWebsites = async () => {
+    const { data } = await supabase.from('brand_websites').select('*').eq('brand_id', brandData.id);
+    if (data) {
+      setWebsites(data);
+    }
+  };
 
   return (
     <div className="p-6 md:p-8 space-y-8 flex flex-col md:flex-row gap-6">
@@ -56,9 +71,49 @@ export default function BrandDashboard({ user, brandData, onLogout, onSettingsCl
 
       <div className="flex-1">
         {activeTab === 'profile' && (
-          <div className="bg-neutral-900 rounded-2xl p-6 border border-neutral-800">
-            <h2 className="text-xl font-black text-white mb-4">Brand Profile</h2>
-            <p className="text-neutral-400">Settings and information configuration coming soon.</p>
+          <div className="space-y-6">
+            <div className="bg-neutral-900 rounded-2xl p-6 border border-neutral-800">
+              <h2 className="text-xl font-black text-white mb-4">Brand Profile</h2>
+              <p className="text-neutral-400">Settings and information configuration coming soon.</p>
+            </div>
+            
+            {websites.length > 0 && (
+              <div>
+                <h2 className="text-xl font-black text-white mb-4">My Websites</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {websites.map(website => (
+                    <div key={website.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 overflow-hidden relative group hover:border-cyan-500/50 transition-colors cursor-pointer">
+                      {website.banner_url && (
+                        <div className="h-24 w-full bg-neutral-800 rounded-xl mb-4 overflow-hidden">
+                          <img src={website.banner_url} className="w-full h-full object-cover" alt="Banner" />
+                        </div>
+                      )}
+                      <div className="flex items-start gap-4">
+                        {website.logo_url ? (
+                          <img src={website.logo_url} className="w-12 h-12 rounded-full object-cover border border-neutral-800" alt="Logo" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center text-xl">🌐</div>
+                        )}
+                        <div className="flex-1">
+                          <h3 className="font-bold text-white text-lg leading-tight">{website.website_name}</h3>
+                          {website.description && (
+                            <p className="text-neutral-500 text-sm mt-1 line-clamp-2">{website.description}</p>
+                          )}
+                          <a 
+                            href={website.website_url.startsWith('http') ? website.website_url : `https://${website.website_url}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 mt-3 text-cyan-500 hover:text-cyan-400 text-sm font-medium"
+                          >
+                            Visit Website <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {activeTab === 'store' && brandData?.id && (
