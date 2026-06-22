@@ -333,6 +333,22 @@ export default function Settings({ user, setView }: SettingsProps) {
           </div>
         </div>
 
+        {role === 'brand' && (
+          <button
+            type="button"
+            onClick={() => setShowStoreSection(prev => !prev)}
+            className="w-full mb-5 py-3.5 bg-gradient-to-r from-cyan-500 to-orange-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg"
+          >
+            🌐 {showStoreSection ? 'Hide' : 'Set Up'} My Website
+          </button>
+        )}
+
+        {role === 'brand' && showStoreSection && profileData?.id && (
+          <div className="mb-6 bg-neutral-900 border border-cyan-500/30 rounded-2xl p-4">
+            <StoreManager brandId={profileData.id} />
+          </div>
+        )}
+
         <div className="space-y-4">
           {role === 'creator' && (
             <>
@@ -465,18 +481,6 @@ export default function Settings({ user, setView }: SettingsProps) {
 
           {role === 'brand' && (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowStoreSection(true);
-                  setTimeout(() => {
-                    document.getElementById('store-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }, 100);
-                }}
-                className="w-full mb-4 py-3 bg-gradient-to-r from-cyan-500 to-orange-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2"
-              >
-                🌐 Set Up My Website
-              </button>
               <div>
                 <label className="block text-sm font-bold mb-2">Business Name</label>
                 <input 
@@ -552,31 +556,6 @@ export default function Settings({ user, setView }: SettingsProps) {
                   className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-1 focus:ring-pink-500 bg-transparent"
                 />
               </div>
-
-              {profileData?.id && (
-                <div id="store-section" className="mt-6 border-t border-neutral-800 pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowStoreSection(!showStoreSection)}
-                    className="w-full flex items-center justify-between bg-neutral-900 border border-cyan-500/30 rounded-2xl p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🌐</span>
-                      <div className="text-left">
-                        <p className="text-white font-bold text-sm">My Website</p>
-                        <p className="text-neutral-500 text-xs">Add products, menu photos, manage orders</p>
-                      </div>
-                    </div>
-                    <ChevronDown className={`w-5 h-5 text-neutral-400 transition-transform ${showStoreSection ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {showStoreSection && (
-                    <div className="mt-3">
-                      <StoreManager brandId={profileData.id} />
-                    </div>
-                  )}
-                </div>
-              )}
             </>
           )}
 
