@@ -1,4 +1,4 @@
-import { Home, Clapperboard, MessageSquare, User as UserIcon } from 'lucide-react';
+import { Home, Clapperboard, MessageSquare, User as UserIcon, Plus } from 'lucide-react';
 import { View } from '../App';
 import { User } from '@supabase/supabase-js';
 
@@ -52,6 +52,16 @@ export default function BottomNav({ view, setView, user, userRole, onOpenAuth }:
         <Clapperboard className="w-6 h-6" />
         <span className="sr-only">Reels</span>
       </button>
+
+      {userRole === 'BRAND' && (
+        <button 
+          onClick={() => setView('CREATE_WEBSITE')}
+          className={`flex flex-col items-center gap-1 p-2 ${view === 'CREATE_WEBSITE' ? 'text-white' : 'text-neutral-500 hover:text-white transition-colors'}`}
+        >
+          <Plus className="w-6 h-6" />
+          <span className="sr-only">Create Website</span>
+        </button>
+      )}
 
       <button 
         onClick={() => setView('INBOX')}

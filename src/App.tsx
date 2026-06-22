@@ -491,20 +491,14 @@ export default function App() {
           )}
         </main>
 
-        {user && 
+        {user && userRole !== 'BRAND' &&
          view !== 'CAMERA' && 
          view !== 'REELS' && 
          view !== 'CREATE_WEBSITE' && (
           <div className="fixed bottom-20 left-1/2 
                           -translate-x-1/2 z-40">
             <button
-              onClick={() => {
-                if (userRole === 'BRAND') {
-                  setView('CREATE_WEBSITE');
-                } else {
-                  setShowUploadMenu(!showUploadMenu);
-                }
-              }}
+              onClick={() => setShowUploadMenu(!showUploadMenu)}
               className="w-14 h-14 bg-gradient-to-r 
                          from-cyan-500 to-orange-500
                          rounded-full shadow-2xl shadow-cyan-500/30
